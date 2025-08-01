@@ -255,7 +255,7 @@
     </div>
     
     <div class="max-w-6xl mx-auto bg-white rounded-xl shadow-xl overflow-hidden relative">
-        <div class="version-badge">v3.0</div>
+        <div class="version-badge">v3.1</div>
         <div class="p-6 bg-gradient-to-r from-blue-800 to-blue-600 text-white">
             <div class="flex flex-col md:flex-row justify-between items-center">
                 <div>
@@ -564,7 +564,7 @@
                     </button>
                 </div>
                 
-                <div class="flex justify-center">
+                <div class="flex justify-center" id="photo-modal-container">
                     <img id="photo-modal-image" class="max-h-96 rounded-lg" src="" alt="Broker Photo">
                 </div>
                 
@@ -679,24 +679,94 @@
             }
         ];
         
-        // Load broker data from localStorage or use default
-        let brokerData = JSON.parse(localStorage.getItem('brokerData')) || [...defaultBrokerData];
-        
-        // Ensure all broker data has consistent structure
-        brokerData = brokerData.map(broker => {
-            // Make sure all required fields exist
-            return {
-                id: broker.id || Math.random().toString(36).substr(2, 9),
-                rank: broker.rank || 0,
-                name: broker.name || "Unknown Broker",
-                settledLoans: broker.settledLoans || 0,
-                targetLoans: broker.targetLoans || 0,
-                revenue: broker.revenue || 0,
-                targetRevenue: broker.targetRevenue || 0,
-                previousLoans: broker.previousLoans || 0,
-                photoUrl: broker.photoUrl || null
+        // Function to preload and cache images from default broker data
+        async function preloadDefaultImages() {
+            // Create a map to store the image data
+            const imageCache = {};
+            
+            // Function to convert image URL to base64
+            const convertImageToBase64 = async (url) => {
+                try {
+                    const response = await fetch(url);
+                    const blob = await response.blob();
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(reader.result);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(blob);
+                    });
+                } catch (error) {
+                    console.error("Error converting image to base64:", error);
+                    return null;
+                }
             };
-        });
+            
+            // Process all default broker images
+            const imagePromises = defaultBrokerData.map(async (broker) => {
+                if (broker.photoUrl && broker.photoUrl.startsWith('http')) {
+                    const base64Image = await convertImageToBase64(broker.photoUrl);
+                    if (base64Image) {
+                        imageCache[broker.id] = base64Image;
+                    }
+                }
+            });
+            
+            // Wait for all images to be processed
+            await Promise.all(imagePromises);
+            
+            return imageCache;
+        }
+        
+        // Initialize image cache
+        let imageCache = {};
+        
+        // Load broker data from localStorage or use default
+        let brokerData = [];
+        
+        // Function to initialize the application
+        async function initializeApp() {
+            // First, try to load from localStorage
+            const savedData = localStorage.getItem('brokerData');
+            
+            if (savedData) {
+                // If we have saved data, use it
+                brokerData = JSON.parse(savedData);
+            } else {
+                // If no saved data, preload images and use default data
+                imageCache = await preloadDefaultImages();
+                
+                // Create a copy of default data with base64 images
+                brokerData = defaultBrokerData.map(broker => {
+                    const newBroker = {...broker};
+                    if (imageCache[broker.id]) {
+                        newBroker.photoUrl = imageCache[broker.id];
+                    }
+                    return newBroker;
+                });
+                
+                // Save the data with base64 images to localStorage
+                saveDataToLocalStorage();
+            }
+            
+            // Ensure all broker data has consistent structure
+            brokerData = brokerData.map(broker => {
+                // Make sure all required fields exist
+                return {
+                    id: broker.id || Math.random().toString(36).substr(2, 9),
+                    rank: broker.rank || 0,
+                    name: broker.name || "Unknown Broker",
+                    settledLoans: broker.settledLoans || 0,
+                    targetLoans: broker.targetLoans || 0,
+                    revenue: broker.revenue || 0,
+                    targetRevenue: broker.targetRevenue || 0,
+                    previousLoans: broker.previousLoans || 0,
+                    photoUrl: broker.photoUrl || null
+                };
+            });
+            
+            // Render the leaderboard
+            renderLeaderboard();
+        }
         
         // Current sort and filter states
         let currentSort = { field: 'settledLoans', ascending: false };
@@ -722,8 +792,20 @@
         }
         
         // Function to reset data to default
-        function resetDataToDefault() {
-            brokerData = [...defaultBrokerData];
+        async function resetDataToDefault() {
+            // Preload images again to ensure we have fresh copies
+            imageCache = await preloadDefaultImages();
+            
+            // Create a copy of default data with base64 images
+            brokerData = defaultBrokerData.map(broker => {
+                const newBroker = {...broker};
+                if (imageCache[broker.id]) {
+                    newBroker.photoUrl = imageCache[broker.id];
+                }
+                return newBroker;
+            });
+            
+            // Save to localStorage and update UI
             saveDataToLocalStorage();
             renderLeaderboard();
             
@@ -882,6 +964,14 @@
             });
         }
         
+        // Function to get broker initials
+        function getBrokerInitials(name) {
+            return name.split(' ')
+                .map(n => n[0])
+                .join('')
+                .toUpperCase();
+        }
+        
         // Function to render the leaderboard
         function renderLeaderboard() {
             const leaderboardBody = document.getElementById('leaderboard-body');
@@ -970,7 +1060,7 @@
                     `;
                 } else {
                     // Create initials from name
-                    const initials = broker.name.split(' ').map(n => n[0]).join('').toUpperCase();
+                    const initials = getBrokerInitials(broker.name);
                     brokerAvatar = `
                         <div class="broker-avatar flex items-center justify-center bg-blue-100 text-blue-800 font-bold cursor-pointer view-photo" data-id="${broker.id}">
                             ${initials}
@@ -1071,20 +1161,19 @@
             if (broker) {
                 // Set photo modal content
                 document.getElementById('photo-modal-name').textContent = broker.name;
+                const photoContainer = document.getElementById('photo-modal-container');
                 
                 if (broker.photoUrl) {
-                    document.getElementById('photo-modal-image').src = broker.photoUrl;
-                    document.getElementById('photo-modal-image').alt = broker.name;
+                    // Show the image
+                    photoContainer.innerHTML = `<img id="photo-modal-image" class="max-h-96 rounded-lg" src="${broker.photoUrl}" alt="${broker.name}">`;
                 } else {
                     // Create an SVG with initials if no photo
-                    const initials = broker.name.split(' ').map(n => n[0]).join('').toUpperCase();
-                    const svg = `
+                    const initials = getBrokerInitials(broker.name);
+                    photoContainer.innerHTML = `
                         <div style="width: 200px; height: 200px; background-color: #dbeafe; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 72px; color: #1e40af; font-weight: bold;">
                             ${initials}
                         </div>
                     `;
-                    document.getElementById('photo-modal-image').style.display = 'none';
-                    document.querySelector('#photo-modal .flex.justify-center').innerHTML = svg;
                 }
                 
                 // Set broker stats
@@ -1101,8 +1190,6 @@
         // Function to close photo modal
         function closePhotoModal() {
             document.getElementById('photo-modal').classList.remove('active');
-            // Reset image display in case we showed an SVG
-            document.getElementById('photo-modal-image').style.display = '';
         }
         
         // Function to handle file selection for broker photo
@@ -1186,6 +1273,14 @@
                         photoPreview.innerHTML = `<img src="${broker.photoUrl}" alt="${broker.name}" class="photo-preview">`;
                         photoDataInput.value = broker.photoUrl;
                         fileNameDisplay.textContent = 'Current photo';
+                    } else {
+                        // Show initials if no photo
+                        const initials = getBrokerInitials(broker.name);
+                        photoPreview.innerHTML = `
+                            <div class="photo-preview flex items-center justify-center bg-blue-100 text-blue-800 font-bold">
+                                ${initials}
+                            </div>
+                        `;
                     }
                 }
             } else {
@@ -1238,13 +1333,17 @@
                     brokerData[brokerIndex] = {
                         ...brokerData[brokerIndex],
                         name: brokerName,
-                        photoUrl: photoUrl || brokerData[brokerIndex].photoUrl, // Keep existing photo if no new one
                         settledLoans: settledLoans,
                         targetLoans: targetLoans,
                         revenue: revenue,
                         targetRevenue: targetRevenue,
                         previousLoans: previousLoans // Keep track of previous value
                     };
+                    
+                    // Only update photo if a new one was provided
+                    if (photoUrl) {
+                        brokerData[brokerIndex].photoUrl = photoUrl;
+                    }
                 }
             } else {
                 // Add new broker
@@ -1308,6 +1407,9 @@
         
         // Initialize the leaderboard
         document.addEventListener('DOMContentLoaded', () => {
+            // Initialize the app (preload images and set up data)
+            initializeApp();
+            
             // Set up sort buttons
             document.querySelectorAll('.sort-btn').forEach(button => {
                 button.addEventListener('click', () => {
@@ -1390,10 +1492,7 @@
             
             // Set up TV mode button
             document.getElementById('tv-mode-btn').addEventListener('click', toggleTVMode);
-            
-            // Initial render
-            renderLeaderboard();
         });
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9681af9892802a8a',t:'MTc1NDAxMzAzOS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9681d5e9116bd5de',t:'MTc1NDAxNDYwOS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
