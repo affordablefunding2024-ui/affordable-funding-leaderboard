@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -225,6 +225,28 @@
             text-overflow: ellipsis;
             max-width: 100%;
         }
+        
+        .action-buttons-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        
+        @media (max-width: 640px) {
+            .action-buttons-container {
+                flex-direction: column;
+            }
+            
+            .data-management-buttons {
+                display: flex;
+                width: 100%;
+            }
+            
+            .data-management-buttons button {
+                flex: 1;
+            }
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -334,8 +356,8 @@
         </div>
         
         <div class="p-6">
-            <!-- Add Broker Button -->
-            <div class="mb-6">
+            <!-- Action Buttons with Improved Spacing -->
+            <div class="action-buttons-container">
                 <button id="add-broker-btn" class="bg-blue-700 hover:bg-blue-800 text-white font-medium py-2 px-4 rounded-lg flex items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                         <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
@@ -344,7 +366,7 @@
                 </button>
                 
                 <!-- Data Management Buttons -->
-                <div class="inline-flex ml-4">
+                <div class="data-management-buttons">
                     <button id="save-data-btn" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-l-lg">
                         Save Data
                     </button>
@@ -554,7 +576,7 @@
     </div>
     
     <script>
-        // Default broker data with photo URLs
+        // Default broker data with photo URLs and consistent structure for all brokers
         const defaultBrokerData = [
             { 
                 id: 1, 
@@ -659,6 +681,22 @@
         
         // Load broker data from localStorage or use default
         let brokerData = JSON.parse(localStorage.getItem('brokerData')) || [...defaultBrokerData];
+        
+        // Ensure all broker data has consistent structure
+        brokerData = brokerData.map(broker => {
+            // Make sure all required fields exist
+            return {
+                id: broker.id || Math.random().toString(36).substr(2, 9),
+                rank: broker.rank || 0,
+                name: broker.name || "Unknown Broker",
+                settledLoans: broker.settledLoans || 0,
+                targetLoans: broker.targetLoans || 0,
+                revenue: broker.revenue || 0,
+                targetRevenue: broker.targetRevenue || 0,
+                previousLoans: broker.previousLoans || 0,
+                photoUrl: broker.photoUrl || null
+            };
+        });
         
         // Current sort and filter states
         let currentSort = { field: 'settledLoans', ascending: false };
@@ -928,12 +966,14 @@
                 let brokerAvatar;
                 if (broker.photoUrl) {
                     brokerAvatar = `
-                        <img src="${broker.photoUrl}" alt="${broker.name}" class="broker-avatar view-photo" data-id="${broker.id}">
+                        <img src="${broker.photoUrl}" alt="${broker.name}" class="broker-avatar view-photo cursor-pointer" data-id="${broker.id}">
                     `;
                 } else {
+                    // Create initials from name
+                    const initials = broker.name.split(' ').map(n => n[0]).join('').toUpperCase();
                     brokerAvatar = `
-                        <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-800 font-bold">
-                            ${broker.name.charAt(0)}
+                        <div class="broker-avatar flex items-center justify-center bg-blue-100 text-blue-800 font-bold cursor-pointer view-photo" data-id="${broker.id}">
+                            ${initials}
                         </div>
                     `;
                 }
@@ -1028,11 +1068,24 @@
             const brokerId = parseInt(e.currentTarget.getAttribute('data-id'));
             const broker = brokerData.find(b => b.id === brokerId);
             
-            if (broker && broker.photoUrl) {
+            if (broker) {
                 // Set photo modal content
                 document.getElementById('photo-modal-name').textContent = broker.name;
-                document.getElementById('photo-modal-image').src = broker.photoUrl;
-                document.getElementById('photo-modal-image').alt = broker.name;
+                
+                if (broker.photoUrl) {
+                    document.getElementById('photo-modal-image').src = broker.photoUrl;
+                    document.getElementById('photo-modal-image').alt = broker.name;
+                } else {
+                    // Create an SVG with initials if no photo
+                    const initials = broker.name.split(' ').map(n => n[0]).join('').toUpperCase();
+                    const svg = `
+                        <div style="width: 200px; height: 200px; background-color: #dbeafe; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 72px; color: #1e40af; font-weight: bold;">
+                            ${initials}
+                        </div>
+                    `;
+                    document.getElementById('photo-modal-image').style.display = 'none';
+                    document.querySelector('#photo-modal .flex.justify-center').innerHTML = svg;
+                }
                 
                 // Set broker stats
                 const loansProgress = Math.round((broker.settledLoans / broker.targetLoans) * 100);
@@ -1048,6 +1101,8 @@
         // Function to close photo modal
         function closePhotoModal() {
             document.getElementById('photo-modal').classList.remove('active');
+            // Reset image display in case we showed an SVG
+            document.getElementById('photo-modal-image').style.display = '';
         }
         
         // Function to handle file selection for broker photo
@@ -1340,5 +1395,5 @@
             renderLeaderboard();
         });
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9681916696ac7136',t:'MTc1NDAxMTgwMi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9681af9892802a8a',t:'MTc1NDAxMzAzOS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
