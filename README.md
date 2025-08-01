@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -181,6 +181,49 @@
             border-radius: 9999px;
             font-size: 0.75rem;
             font-weight: 600;
+        }
+        
+        .file-upload-container {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+        
+        .file-upload-container input[type=file] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+        
+        .file-upload-btn {
+            display: inline-block;
+            padding: 8px 16px;
+            background-color: #e5e7eb;
+            color: #4b5563;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .file-upload-btn:hover {
+            background-color: #d1d5db;
+        }
+        
+        .file-name {
+            margin-top: 0.5rem;
+            font-size: 0.75rem;
+            color: #6b7280;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
         }
     </style>
 </head>
@@ -401,9 +444,18 @@
                     </div>
                     
                     <div class="mb-4">
-                        <label for="photo-url" class="block text-sm font-medium text-gray-700 mb-1">Photo URL (optional)</label>
-                        <input type="url" id="photo-url" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="https://example.com/photo.jpg">
-                        <p class="text-xs text-gray-500 mt-1">Enter a URL to an image (JPG, PNG, etc.)</p>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Broker Photo</label>
+                        <div class="file-upload-container w-full">
+                            <div class="file-upload-btn w-full text-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.707-.293l-1.121-1.121A2 2 0 0011.172 3H8.828a2 2 0 00-1.414.586L6.293 4.707A1 1 0 015.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" />
+                                </svg>
+                                Choose Photo
+                            </div>
+                            <input type="file" id="photo-upload" accept="image/*">
+                        </div>
+                        <div class="file-name" id="file-name">No file chosen</div>
+                        <input type="hidden" id="photo-data">
                     </div>
                     
                     <div class="mb-4">
@@ -998,6 +1050,41 @@
             document.getElementById('photo-modal').classList.remove('active');
         }
         
+        // Function to handle file selection for broker photo
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            // Update file name display
+            document.getElementById('file-name').textContent = file.name;
+            
+            // Check if file is an image
+            if (!file.type.match('image.*')) {
+                alert('Please select an image file.');
+                return;
+            }
+            
+            // Check file size (limit to 2MB)
+            if (file.size > 2 * 1024 * 1024) {
+                alert('Image size should be less than 2MB.');
+                return;
+            }
+            
+            // Read the file and convert to data URL
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const dataUrl = e.target.result;
+                
+                // Update photo preview
+                const photoPreview = document.getElementById('photo-preview');
+                photoPreview.innerHTML = `<img src="${dataUrl}" alt="Broker Photo" class="photo-preview">`;
+                
+                // Store data URL in hidden input
+                document.getElementById('photo-data').value = dataUrl;
+            };
+            reader.readAsDataURL(file);
+        }
+        
         // Function to open the broker modal
         function openBrokerModal(isEdit = false, brokerId = null) {
             const modal = document.getElementById('broker-modal');
@@ -1005,8 +1092,9 @@
             const form = document.getElementById('broker-form');
             const idInput = document.getElementById('broker-id');
             const nameInput = document.getElementById('broker-name');
-            const photoUrlInput = document.getElementById('photo-url');
             const photoPreview = document.getElementById('photo-preview');
+            const fileNameDisplay = document.getElementById('file-name');
+            const photoDataInput = document.getElementById('photo-data');
             const settledLoansInput = document.getElementById('settled-loans');
             const targetLoansInput = document.getElementById('target-loans');
             const revenueInput = document.getElementById('revenue');
@@ -1014,6 +1102,8 @@
             
             // Reset form
             form.reset();
+            photoDataInput.value = '';
+            fileNameDisplay.textContent = 'No file chosen';
             
             // Reset photo preview
             photoPreview.innerHTML = `
@@ -1031,7 +1121,6 @@
                     modalTitle.textContent = 'Edit Broker';
                     idInput.value = broker.id;
                     nameInput.value = broker.name;
-                    photoUrlInput.value = broker.photoUrl || '';
                     settledLoansInput.value = broker.settledLoans;
                     targetLoansInput.value = broker.targetLoans;
                     revenueInput.value = broker.revenue;
@@ -1040,6 +1129,8 @@
                     // Update photo preview if available
                     if (broker.photoUrl) {
                         photoPreview.innerHTML = `<img src="${broker.photoUrl}" alt="${broker.name}" class="photo-preview">`;
+                        photoDataInput.value = broker.photoUrl;
+                        fileNameDisplay.textContent = 'Current photo';
                     }
                 }
             } else {
@@ -1057,32 +1148,13 @@
             modal.classList.remove('active');
         }
         
-        // Function to update photo preview
-        function updatePhotoPreview() {
-            const photoUrl = document.getElementById('photo-url').value;
-            const photoPreview = document.getElementById('photo-preview');
-            const brokerName = document.getElementById('broker-name').value || 'Broker';
-            
-            if (photoUrl) {
-                photoPreview.innerHTML = `<img src="${photoUrl}" alt="${brokerName}" class="photo-preview">`;
-            } else {
-                photoPreview.innerHTML = `
-                    <div class="photo-placeholder">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                    </div>
-                `;
-            }
-        }
-        
         // Function to handle form submission
         function handleFormSubmit(e) {
             e.preventDefault();
             
             const idInput = document.getElementById('broker-id');
             const nameInput = document.getElementById('broker-name');
-            const photoUrlInput = document.getElementById('photo-url');
+            const photoDataInput = document.getElementById('photo-data');
             const settledLoansInput = document.getElementById('settled-loans');
             const targetLoansInput = document.getElementById('target-loans');
             const revenueInput = document.getElementById('revenue');
@@ -1090,7 +1162,7 @@
             
             const brokerId = idInput.value ? parseInt(idInput.value) : null;
             const brokerName = nameInput.value.trim();
-            const photoUrl = photoUrlInput.value.trim();
+            const photoUrl = photoDataInput.value.trim();
             const settledLoans = parseInt(settledLoansInput.value);
             const targetLoans = parseInt(targetLoansInput.value);
             const revenue = parseInt(revenueInput.value);
@@ -1111,7 +1183,7 @@
                     brokerData[brokerIndex] = {
                         ...brokerData[brokerIndex],
                         name: brokerName,
-                        photoUrl: photoUrl || null,
+                        photoUrl: photoUrl || brokerData[brokerIndex].photoUrl, // Keep existing photo if no new one
                         settledLoans: settledLoans,
                         targetLoans: targetLoans,
                         revenue: revenue,
@@ -1231,8 +1303,8 @@
                 openBrokerModal();
             });
             
-            // Set up photo URL input to update preview
-            document.getElementById('photo-url').addEventListener('input', updatePhotoPreview);
+            // Set up photo upload
+            document.getElementById('photo-upload').addEventListener('change', handleFileSelect);
             
             // Set up form submission
             document.getElementById('broker-form').addEventListener('submit', handleFormSubmit);
@@ -1268,5 +1340,5 @@
             renderLeaderboard();
         });
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96817818a0ada94f',t:'MTc1NDAxMDc2Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9681916696ac7136',t:'MTc1NDAxMTgwMi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
