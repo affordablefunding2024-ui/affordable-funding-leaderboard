@@ -1,11 +1,9 @@
-# affordable-funding-leaderboard
-Affordable Funding Team's Leaderboard
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Affordable Funding - Broker Leaderboard</title>
+    <title>Affordable Funding - Broker Leaderboard v3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
@@ -144,6 +142,46 @@ Affordable Funding Team's Leaderboard
         .fullscreen .fullscreen-indicator {
             display: block;
         }
+        
+        .broker-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            background-color: #e5e7eb;
+        }
+        
+        .photo-preview {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            background-color: #e5e7eb;
+            margin: 0 auto;
+            display: block;
+        }
+        
+        .photo-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #9ca3af;
+        }
+        
+        .version-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #1e40af;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -151,7 +189,8 @@ Affordable Funding Team's Leaderboard
         Press ESC to exit TV mode
     </div>
     
-    <div class="max-w-6xl mx-auto bg-white rounded-xl shadow-xl overflow-hidden">
+    <div class="max-w-6xl mx-auto bg-white rounded-xl shadow-xl overflow-hidden relative">
+        <div class="version-badge">v3.0</div>
         <div class="p-6 bg-gradient-to-r from-blue-800 to-blue-600 text-white">
             <div class="flex flex-col md:flex-row justify-between items-center">
                 <div>
@@ -345,9 +384,26 @@ Affordable Funding Team's Leaderboard
                 <form id="broker-form">
                     <input type="hidden" id="broker-id">
                     
+                    <!-- Photo Preview -->
+                    <div class="mb-6">
+                        <div class="photo-preview" id="photo-preview">
+                            <div class="photo-placeholder">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="mb-4">
                         <label for="broker-name" class="block text-sm font-medium text-gray-700 mb-1">Broker Name</label>
                         <input type="text" id="broker-name" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="photo-url" class="block text-sm font-medium text-gray-700 mb-1">Photo URL (optional)</label>
+                        <input type="url" id="photo-url" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="https://example.com/photo.jpg">
+                        <p class="text-xs text-gray-500 mt-1">Enter a URL to an image (JPG, PNG, etc.)</p>
                     </div>
                     
                     <div class="mb-4">
@@ -421,8 +477,32 @@ Affordable Funding Team's Leaderboard
         </div>
     </div>
     
+    <!-- Photo Preview Modal -->
+    <div id="photo-modal" class="modal fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 opacity-0 pointer-events-none">
+        <div class="modal-content bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 transform translate-y-8">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-gray-900" id="photo-modal-name">Broker Name</h3>
+                    <button id="close-photo-modal" class="text-gray-500 hover:text-gray-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                
+                <div class="flex justify-center">
+                    <img id="photo-modal-image" class="max-h-96 rounded-lg" src="" alt="Broker Photo">
+                </div>
+                
+                <div class="mt-6 text-center">
+                    <div class="text-sm font-medium text-gray-700" id="photo-modal-stats"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <script>
-        // Default broker data
+        // Default broker data with photo URLs
         const defaultBrokerData = [
             { 
                 id: 1, 
@@ -432,7 +512,8 @@ Affordable Funding Team's Leaderboard
                 targetLoans: 50, 
                 revenue: 210000, 
                 targetRevenue: 250000,
-                previousLoans: 38 // For tracking improvement
+                previousLoans: 38,
+                photoUrl: "https://randomuser.me/api/portraits/men/32.jpg"
             },
             { 
                 id: 2, 
@@ -442,7 +523,8 @@ Affordable Funding Team's Leaderboard
                 targetLoans: 45, 
                 revenue: 190000, 
                 targetRevenue: 225000,
-                previousLoans: 32
+                previousLoans: 32,
+                photoUrl: "https://randomuser.me/api/portraits/women/44.jpg"
             },
             { 
                 id: 3, 
@@ -452,7 +534,8 @@ Affordable Funding Team's Leaderboard
                 targetLoans: 45, 
                 revenue: 175000, 
                 targetRevenue: 225000,
-                previousLoans: 30
+                previousLoans: 30,
+                photoUrl: "https://randomuser.me/api/portraits/men/67.jpg"
             },
             { 
                 id: 4, 
@@ -462,7 +545,8 @@ Affordable Funding Team's Leaderboard
                 targetLoans: 40, 
                 revenue: 160000, 
                 targetRevenue: 200000,
-                previousLoans: 29
+                previousLoans: 29,
+                photoUrl: "https://randomuser.me/api/portraits/women/17.jpg"
             },
             { 
                 id: 5, 
@@ -472,7 +556,8 @@ Affordable Funding Team's Leaderboard
                 targetLoans: 40, 
                 revenue: 150000, 
                 targetRevenue: 200000,
-                previousLoans: 25
+                previousLoans: 25,
+                photoUrl: "https://randomuser.me/api/portraits/men/91.jpg"
             },
             { 
                 id: 6, 
@@ -482,7 +567,8 @@ Affordable Funding Team's Leaderboard
                 targetLoans: 35, 
                 revenue: 140000, 
                 targetRevenue: 175000,
-                previousLoans: 25
+                previousLoans: 25,
+                photoUrl: "https://randomuser.me/api/portraits/women/28.jpg"
             },
             { 
                 id: 7, 
@@ -492,7 +578,8 @@ Affordable Funding Team's Leaderboard
                 targetLoans: 35, 
                 revenue: 125000, 
                 targetRevenue: 175000,
-                previousLoans: 22
+                previousLoans: 22,
+                photoUrl: "https://randomuser.me/api/portraits/men/55.jpg"
             },
             { 
                 id: 8, 
@@ -502,7 +589,8 @@ Affordable Funding Team's Leaderboard
                 targetLoans: 30, 
                 revenue: 110000, 
                 targetRevenue: 150000,
-                previousLoans: 20
+                previousLoans: 20,
+                photoUrl: "https://randomuser.me/api/portraits/women/63.jpg"
             },
             { 
                 id: 9, 
@@ -512,7 +600,8 @@ Affordable Funding Team's Leaderboard
                 targetLoans: 30, 
                 revenue: 90000, 
                 targetRevenue: 150000,
-                previousLoans: 15
+                previousLoans: 15,
+                photoUrl: "https://randomuser.me/api/portraits/men/41.jpg"
             }
         ];
         
@@ -583,7 +672,7 @@ Affordable Funding Team's Leaderboard
                 
                 // Show edit controls again
                 document.querySelectorAll('.edit-btn, .delete-btn, #add-broker-btn, #save-data-btn, #reset-data-btn').forEach(el => {
-                    el.style.display = '');
+                    el.style.display = '';
                 });
                 
                 // Clear auto-refresh
@@ -783,13 +872,25 @@ Affordable Funding Team's Leaderboard
                 // Calculate remaining loans needed
                 const remainingLoans = Math.max(0, broker.targetLoans - broker.settledLoans);
                 
+                // Determine broker avatar (photo or initials)
+                let brokerAvatar;
+                if (broker.photoUrl) {
+                    brokerAvatar = `
+                        <img src="${broker.photoUrl}" alt="${broker.name}" class="broker-avatar view-photo" data-id="${broker.id}">
+                    `;
+                } else {
+                    brokerAvatar = `
+                        <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-800 font-bold">
+                            ${broker.name.charAt(0)}
+                        </div>
+                    `;
+                }
+                
                 row.innerHTML = `
                     <td class="px-4 py-4 whitespace-nowrap">${rankDisplay}</td>
                     <td class="px-4 py-4 whitespace-nowrap">
                         <div class="flex items-center">
-                            <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-800 font-bold">
-                                ${broker.name.charAt(0)}
-                            </div>
+                            ${brokerAvatar}
                             <div class="ml-4">
                                 <div class="text-sm font-medium text-gray-900">${broker.name}</div>
                             </div>
@@ -849,6 +950,11 @@ Affordable Funding Team's Leaderboard
                 button.addEventListener('click', handleDeleteBroker);
             });
             
+            // Add event listeners for photo viewing
+            document.querySelectorAll('.view-photo').forEach(photo => {
+                photo.addEventListener('click', handleViewPhoto);
+            });
+            
             // Update timestamp
             updateTimestamp();
         }
@@ -865,6 +971,33 @@ Affordable Funding Team's Leaderboard
             });
         }
         
+        // Function to handle viewing a broker's photo
+        function handleViewPhoto(e) {
+            const brokerId = parseInt(e.currentTarget.getAttribute('data-id'));
+            const broker = brokerData.find(b => b.id === brokerId);
+            
+            if (broker && broker.photoUrl) {
+                // Set photo modal content
+                document.getElementById('photo-modal-name').textContent = broker.name;
+                document.getElementById('photo-modal-image').src = broker.photoUrl;
+                document.getElementById('photo-modal-image').alt = broker.name;
+                
+                // Set broker stats
+                const loansProgress = Math.round((broker.settledLoans / broker.targetLoans) * 100);
+                document.getElementById('photo-modal-stats').innerHTML = `
+                    Rank: ${broker.rank} | Settled Loans: ${broker.settledLoans}/${broker.targetLoans} (${loansProgress}%) | Revenue: $${broker.revenue.toLocaleString()}
+                `;
+                
+                // Show modal
+                document.getElementById('photo-modal').classList.add('active');
+            }
+        }
+        
+        // Function to close photo modal
+        function closePhotoModal() {
+            document.getElementById('photo-modal').classList.remove('active');
+        }
+        
         // Function to open the broker modal
         function openBrokerModal(isEdit = false, brokerId = null) {
             const modal = document.getElementById('broker-modal');
@@ -872,6 +1005,8 @@ Affordable Funding Team's Leaderboard
             const form = document.getElementById('broker-form');
             const idInput = document.getElementById('broker-id');
             const nameInput = document.getElementById('broker-name');
+            const photoUrlInput = document.getElementById('photo-url');
+            const photoPreview = document.getElementById('photo-preview');
             const settledLoansInput = document.getElementById('settled-loans');
             const targetLoansInput = document.getElementById('target-loans');
             const revenueInput = document.getElementById('revenue');
@@ -880,6 +1015,15 @@ Affordable Funding Team's Leaderboard
             // Reset form
             form.reset();
             
+            // Reset photo preview
+            photoPreview.innerHTML = `
+                <div class="photo-placeholder">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                </div>
+            `;
+            
             if (isEdit && brokerId) {
                 // Find the broker
                 const broker = brokerData.find(b => b.id === brokerId);
@@ -887,10 +1031,16 @@ Affordable Funding Team's Leaderboard
                     modalTitle.textContent = 'Edit Broker';
                     idInput.value = broker.id;
                     nameInput.value = broker.name;
+                    photoUrlInput.value = broker.photoUrl || '';
                     settledLoansInput.value = broker.settledLoans;
                     targetLoansInput.value = broker.targetLoans;
                     revenueInput.value = broker.revenue;
                     targetRevenueInput.value = broker.targetRevenue;
+                    
+                    // Update photo preview if available
+                    if (broker.photoUrl) {
+                        photoPreview.innerHTML = `<img src="${broker.photoUrl}" alt="${broker.name}" class="photo-preview">`;
+                    }
                 }
             } else {
                 modalTitle.textContent = 'Add New Broker';
@@ -907,12 +1057,32 @@ Affordable Funding Team's Leaderboard
             modal.classList.remove('active');
         }
         
+        // Function to update photo preview
+        function updatePhotoPreview() {
+            const photoUrl = document.getElementById('photo-url').value;
+            const photoPreview = document.getElementById('photo-preview');
+            const brokerName = document.getElementById('broker-name').value || 'Broker';
+            
+            if (photoUrl) {
+                photoPreview.innerHTML = `<img src="${photoUrl}" alt="${brokerName}" class="photo-preview">`;
+            } else {
+                photoPreview.innerHTML = `
+                    <div class="photo-placeholder">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                    </div>
+                `;
+            }
+        }
+        
         // Function to handle form submission
         function handleFormSubmit(e) {
             e.preventDefault();
             
             const idInput = document.getElementById('broker-id');
             const nameInput = document.getElementById('broker-name');
+            const photoUrlInput = document.getElementById('photo-url');
             const settledLoansInput = document.getElementById('settled-loans');
             const targetLoansInput = document.getElementById('target-loans');
             const revenueInput = document.getElementById('revenue');
@@ -920,6 +1090,7 @@ Affordable Funding Team's Leaderboard
             
             const brokerId = idInput.value ? parseInt(idInput.value) : null;
             const brokerName = nameInput.value.trim();
+            const photoUrl = photoUrlInput.value.trim();
             const settledLoans = parseInt(settledLoansInput.value);
             const targetLoans = parseInt(targetLoansInput.value);
             const revenue = parseInt(revenueInput.value);
@@ -940,6 +1111,7 @@ Affordable Funding Team's Leaderboard
                     brokerData[brokerIndex] = {
                         ...brokerData[brokerIndex],
                         name: brokerName,
+                        photoUrl: photoUrl || null,
                         settledLoans: settledLoans,
                         targetLoans: targetLoans,
                         revenue: revenue,
@@ -954,6 +1126,7 @@ Affordable Funding Team's Leaderboard
                     id: newId,
                     rank: 0, // Will be calculated
                     name: brokerName,
+                    photoUrl: photoUrl || null,
                     settledLoans: settledLoans,
                     targetLoans: targetLoans,
                     revenue: revenue,
@@ -1058,6 +1231,9 @@ Affordable Funding Team's Leaderboard
                 openBrokerModal();
             });
             
+            // Set up photo URL input to update preview
+            document.getElementById('photo-url').addEventListener('input', updatePhotoPreview);
+            
             // Set up form submission
             document.getElementById('broker-form').addEventListener('submit', handleFormSubmit);
             
@@ -1067,6 +1243,9 @@ Affordable Funding Team's Leaderboard
             // Set up delete confirmation
             document.getElementById('confirm-delete-btn').addEventListener('click', confirmDeleteBroker);
             document.getElementById('cancel-delete-btn').addEventListener('click', cancelDeleteBroker);
+            
+            // Set up photo modal close button
+            document.getElementById('close-photo-modal').addEventListener('click', closePhotoModal);
             
             // Set up save data button
             document.getElementById('save-data-btn').addEventListener('click', saveDataToLocalStorage);
@@ -1089,5 +1268,5 @@ Affordable Funding Team's Leaderboard
             renderLeaderboard();
         });
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9681539cb4e85726',t:'MTc1NDAwOTI3Mi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96816ca1c676e7d2',t:'MTc1NDAxMDI5Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
